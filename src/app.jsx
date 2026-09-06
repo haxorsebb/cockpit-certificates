@@ -24,6 +24,7 @@ import "./app.scss";
 import { Alert, AlertActionCloseButton, AlertVariant, AlertGroup } from "@patternfly/react-core/dist/esm/components/Alert/index.js";
 import { Page, PageSection, PageSectionVariants } from "@patternfly/react-core/dist/esm/components/Page/index.js";
 
+import AppliancePki from "./appliancePki.jsx";
 import EmptyState from "./emptyState.jsx";
 import { getRequests, getRequest, getCAs, getCA } from './dbus.js';
 import * as service from "service.js";
@@ -205,7 +206,10 @@ export class Application extends React.Component {
         }
 
         const certificatesBody = (
-            <CertificateList cas={cas} certs={certs} addAlert={this.addAlert} appOnValueChanged={this.onValueChanged} />
+            <>
+                <AppliancePki addAlert={this.addAlert} />
+                <CertificateList cas={cas} certs={certs} addAlert={this.addAlert} appOnValueChanged={this.onValueChanged} />
+            </>
         );
 
         const emptyStateBody = (
