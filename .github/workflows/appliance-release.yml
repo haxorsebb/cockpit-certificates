@@ -55,7 +55,7 @@ jobs:
                   *) echo "Unexpected release tag: ${GITHUB_REF_NAME}" >&2; exit 1 ;;
               esac
           else
-              version="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+              version="0.0.0.ci.${GITHUB_RUN_NUMBER}"
           fi
 
           test -n "$version"
