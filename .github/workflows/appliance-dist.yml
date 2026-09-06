@@ -1,0 +1,67 @@
+name: appliance-dist
+
+on:
+  push:
+    branches:
+      - feature/appliance-integration
+    paths:
+      - '.github/workflows/appliance-dist.yml'
+      - '.gitignore'
+      - 'Makefile'
+      - 'build.js'
+      - 'package.json'
+      - 'src/**'
+      - 'po/**'
+      - 'org.cockpit-project.certificates.metainfo.xml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-dist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out appliance integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/appliance-integration
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Build deterministic production bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f package-lock.json ]]; then
+              npm ci
+          fi
+
+          NODE_ENV=production make
+
+          test -s package-lock.json
+          test -s dist/manifest.json
+          test -s dist/index.js
+
+      - name: Commit generated bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git add package-lock.json dist/
+
+          if git diff --cached --quiet; then
+              echo 'Generated frontend bundle is already current.'
+              exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build: refresh appliance production bundle'
+          git push origin HEAD:feature/appliance-integration
