@@ -19,6 +19,7 @@ const _ = cockpit.gettext;
 const STATUS_PATH = "/data/system/pki/status.json";
 const PUBLIC_CA_PATH = "/data/system/pki/local-ca.crt";
 const PUBLIC_CA_DOWNLOAD_NAME = "n8n-appliance-local-ca.crt";
+const PUBLIC_CA_MAX_SIZE = 1024 * 1024;
 
 const providerName = provider => provider === "local" ? _("Local appliance CA") : provider;
 
@@ -72,25 +73,24 @@ export class AppliancePki extends React.Component {
     }
 
     downloadPublicCa() {
-        cockpit.file(PUBLIC_CA_PATH).read()
-                .then(content => {
-                    if (!content)
-                        throw new Error(_("The appliance CA certificate is empty"));
-
-                    const blob = new Blob([content], { type: "application/x-pem-file" });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = PUBLIC_CA_DOWNLOAD_NAME;
-                    link.style.display = "none";
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
-                })
-                .catch(error => {
-                    this.props.addAlert(_("Could not download appliance CA"), error.message || String(error));
-                });
+        // Use Cockpit's authenticated external fsread1 channel rather than
+        // materializing the certificate into a browser blob. This preserves
+        // Cockpit's default CSP and keeps host file access inside cockpit-bridge.
+        const payload = JSON.stringify({
+            payload: "fsread1",
+            binary: "raw",
+            path: PUBLIC_CA_PATH,
+            host: cockpit.transport.host,
+            external: {
+                "content-disposition": `attachment; filename="${PUBLIC_CA_DOWNLOAD_NAME}"`,
+                "content-type": "application/x-pem-file",
+            },
+            max_read_size: PUBLIC_CA_MAX_SIZE,
+        });
+        const encodedPayload = new TextEncoder().encode(payload);
+        const query = window.btoa(String.fromCharCode(...encodedPayload));
+        const prefix = (new URL(cockpit.transport.uri("channel/" + cockpit.transport.csrf_token))).pathname;
+        window.open(`${prefix}?${query}`);
     }
 
     render() {
