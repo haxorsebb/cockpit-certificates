@@ -9,6 +9,5 @@
         }
     },
 
-    "preload": [ "index" ],
-    "content-security-policy": "frame-src 'self' blob:"
+    "preload": [ "index" ]
 }
