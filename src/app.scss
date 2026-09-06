@@ -3,3 +3,22 @@
 p {
     font-weight: bold;
 }
+
+.appliance-pki {
+    margin-block-end: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--pf-v5-global--BorderColor--100);
+    border-radius: 3px;
+}
+
+.appliance-pki-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 1rem;
+}
+
+.appliance-pki-header h2 {
+    margin-block: 0 0.25rem;
+}
