@@ -3,6 +3,7 @@
 *.tar.xz
 *.rpm
 node_modules/
+dist/
 pkg
 /*.spec
 /.vagrant
@@ -18,7 +19,6 @@ tmp/
 /tools
 /bots
 
-# The appliance integration branch intentionally tracks package-lock.json and
-# the production dist/ bundle. Yocto 6.0 does not fetch NPM dependencies during
-# BitBake tasks; the pinned Git revision is therefore a self-contained,
-# reproducible source input for the appliance recipe.
+# The appliance integration branch intentionally tracks package-lock.json.
+# Production dist/ assets are generated from that lockfile by the release
+# workflow and shipped in the versioned release artifact consumed by Yocto.
