@@ -3,8 +3,19 @@ name: appliance-release
 on:
   workflow_dispatch:
   push:
+    branches:
+      - feature/appliance-integration
     tags:
       - 'appliance-v*'
+    paths:
+      - '.github/workflows/appliance-release.yml'
+      - 'Makefile'
+      - 'build.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/**'
+      - 'po/**'
+      - 'org.cockpit-project.certificates.metainfo.xml'
 
 permissions:
   contents: write
