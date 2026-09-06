@@ -1,0 +1,121 @@
+name: appliance-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'appliance-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Set up Wrynose-matched Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.23.2'
+
+      - name: Verify release toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(node --version)" = 'v22.23.2'
+          test "$(npm --version)" = '10.9.8'
+          test -s package-lock.json
+
+          echo "node=$(node --version)"
+          echo "npm=$(npm --version)"
+
+      - name: Restore locked frontend dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+
+      - name: Determine release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE}" == 'tag' ]]; then
+              case "${GITHUB_REF_NAME}" in
+                  appliance-v*) version="${GITHUB_REF_NAME#appliance-v}" ;;
+                  *) echo "Unexpected release tag: ${GITHUB_REF_NAME}" >&2; exit 1 ;;
+              esac
+          else
+              version="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+          fi
+
+          test -n "$version"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+          echo "release version: $version"
+
+      - name: Build deterministic distribution artifact
+        id: build
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          make VERSION="$VERSION" dist
+
+          tarball="cockpit-certificates-${VERSION}.tar.xz"
+          checksum="${tarball}.sha256"
+
+          test -s package-lock.json
+          test -s dist/manifest.json
+          test -s dist/index.html
+          test -s dist/index.js.gz
+          test -s "$tarball"
+
+          tar -tf "$tarball" | grep -Fx "cockpit-certificates-${VERSION}/package-lock.json"
+          tar -tf "$tarball" | grep -Fx "cockpit-certificates-${VERSION}/dist/manifest.json"
+          tar -tf "$tarball" | grep -Fx "cockpit-certificates-${VERSION}/dist/index.js.gz"
+          tar -tf "$tarball" | grep -Fx "cockpit-certificates-${VERSION}/pkg/lib/cockpit-po-plugin.js"
+
+          sha256sum "$tarball" > "$checksum"
+          first_sha="$(cut -d' ' -f1 "$checksum")"
+
+          # The upstream Makefile already normalizes tar ordering, mtimes,
+          # ownership and modes. Recreate the archive once and require the
+          # byte-for-byte checksum to remain unchanged.
+          rm -f "$tarball"
+          make VERSION="$VERSION" dist
+          second_sha="$(sha256sum "$tarball" | cut -d' ' -f1)"
+          test "$first_sha" = "$second_sha"
+          sha256sum "$tarball" > "$checksum"
+
+          printf 'tarball=%s\n' "$tarball" >> "$GITHUB_OUTPUT"
+          printf 'checksum=%s\n' "$checksum" >> "$GITHUB_OUTPUT"
+
+          echo "sha256=$second_sha"
+
+      - name: Publish GitHub release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TARBALL: ${{ steps.build.outputs.tarball }}
+          CHECKSUM: ${{ steps.build.outputs.checksum }}
+        run: |
+          set -euo pipefail
+
+          gh release create "$GITHUB_REF_NAME" \
+              "$TARBALL" \
+              "$CHECKSUM" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --generate-notes \
+              --title "cockpit-certificates ${VERSION} (appliance)"
