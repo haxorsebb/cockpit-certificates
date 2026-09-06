@@ -79,10 +79,10 @@ jobs:
           test -s dist/index.js.gz
           test -s "$tarball"
 
-          tar -tf "$tarball" | grep -Fx "cockpit-certificates-${VERSION}/package-lock.json"
-          tar -tf "$tarball" | grep -Fx "cockpit-certificates-${VERSION}/dist/manifest.json"
-          tar -tf "$tarball" | grep -Fx "cockpit-certificates-${VERSION}/dist/index.js.gz"
-          tar -tf "$tarball" | grep -Fx "cockpit-certificates-${VERSION}/pkg/lib/cockpit-po-plugin.js"
+          tar -tf "$tarball" | grep -Fx "cockpit-certificates/package-lock.json"
+          tar -tf "$tarball" | grep -Fx "cockpit-certificates/dist/manifest.json"
+          tar -tf "$tarball" | grep -Fx "cockpit-certificates/dist/index.js.gz"
+          tar -tf "$tarball" | grep -Fx "cockpit-certificates/pkg/lib/cockpit-po-plugin.js"
 
           sha256sum "$tarball" > "$checksum"
           first_sha="$(cut -d' ' -f1 "$checksum")"
